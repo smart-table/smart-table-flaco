@@ -1,0 +1,40 @@
+{
+  "name": "smart-table-flaco",
+  "version": "0.1.0",
+  "description": "smart table binding for Flaco framework",
+  "main": "index.js",
+  "scripts": {
+    "test:ci": "npm run build && npm test",
+    "test": "rollup -c ./rollup/test.js | tape-run",
+    "build:clean": "rm -rf ./dist && mkdir -p ./dist/bundle && cp -r ./src ./dist/src",
+    "build:compile": "tsc",
+    "build:bundle": "rollup -c ./rollup/build.js && rollup -c ./rollup/cdn.js",
+    "build:example": "tsc -b ./example && rollup -c ./rollup/example.js",
+    "build": "npm run build:clean && npm run build:compile && npm run build:bundle"
+  },
+  "keywords": [
+    "smart-table",
+    "flaco",
+    "ui",
+    "grid",
+    "table",
+    "smart",
+    "datagrid",
+    "data-grid"
+  ],
+  "author": "Laurent Renard <laurent34azerty@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "rollup": "^0.66.6",
+    "rollup-plugin-node-resolve": "^3.4.0",
+    "tape-run": "^4.0.0",
+    "typescript": "^3.1.4",
+    "zora": "^2.0.1",
+    "smart-table-core": "^3.0.2",
+    "flaco": "2.0.0-2"
+  },
+  "peerDependencies": {
+    "smart-table-core": "^3.0.2",
+    "flaco": "2.0.0-2"
+  }
+}
