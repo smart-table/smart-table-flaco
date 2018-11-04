@@ -1,6 +1,7 @@
 (function () {
     'use strict';
 
+    const swap = (f) => (a, b) => f(b, a);
     const compose = (first, ...fns) => (...args) => fns.reduce((previous, current) => current(previous), first(...args));
     const curry = (fn, arityLeft) => {
         const arity = arityLeft || fn.length;
@@ -318,36 +319,28 @@
         return isVTextNode(vnode) ? escapeHTML(String(vnode.props.value)) : `<${nodeType}${attributes ? ` ${attributes}` : ''}>${childrenHtml}</${nodeType}>`;
     });
 
-    const heroes = [
-        { id: 11, name: 'Mr. Nice' },
-        { id: 12, name: 'Narco' },
-        { id: 13, name: 'Bombasto' },
-        { id: 14, name: 'Celeritas' },
-        { id: 15, name: 'Magneta' },
-        { id: 16, name: 'RubberMan' },
-        { id: 17, name: 'Dynama' },
-        { id: 18, name: 'Dr IQ' },
-        { id: 19, name: 'Magma' },
-        { id: 20, name: 'Tornado' }
-    ];
-
-    const swap$1 = (f) => (a, b) => f(b, a);
-    const compose$1 = (first, ...fns) => (...args) => fns.reduce((previous, current) => current(previous), first(...args));
-    const curry$1 = (fn, arityLeft) => {
-        const arity = arityLeft || fn.length;
-        return (...args) => {
-            const argLength = args.length || 1;
-            if (arity === argLength) {
-                return fn(...args);
-            }
-            const func = (...moreArgs) => fn(...args, ...moreArgs);
-            return curry$1(func, arity - args.length);
-        };
-    };
-    const tap$1 = (fn) => arg => {
-        fn(arg);
-        return arg;
-    };
+    var Job;
+    (function (Job) {
+        Job["DEV"] = "dev";
+        Job["QA"] = "qa";
+        Job["MANAGER"] = "manager";
+    })(Job || (Job = {}));
+    const firstNames = ['Laurent', 'Charlie', 'Elsa', 'Bob', 'Blandine', 'Raymond', 'Jade', 'Athanase', 'Antoine', 'Benjamin', 'Solenne', 'Alice', 'Boris', 'Cedric', 'Camille', 'Isabelle', 'Olivier', 'Nicolas', 'Amaury', 'Odile'];
+    const lastNames = ['Renard', 'Dupraz', 'Dupont', 'Leponge', 'Robin', 'Blasec', 'Verton', 'Albert', 'Vian', 'Bertin', 'Chevalier', 'Romus', 'Cassare', 'Jourdin', 'Lazarus', 'Blanc', 'Vacon', 'Boulus', 'Giroux', 'Marcelin'];
+    const jobs = [Job.DEV, Job.QA, Job.MANAGER];
+    const items = [];
+    for (let i = 0; i < 100000; i++) {
+        items.push({
+            name: {
+                first: firstNames[Math.floor(Math.random() * 20)],
+                last: lastNames[Math.floor(Math.random() * 20)]
+            },
+            birthDate: new Date(Math.floor(Math.random() * 1000 * 3600 * 24 * 365 * 50)),
+            balance: Math.floor(Math.random() * 5000),
+            job: jobs[Math.floor(Math.random() * 3)]
+        });
+    }
+    const users = items;
 
     const pointer = (path) => {
         const parts = path.split('.');
@@ -404,6 +397,30 @@
         };
         return instance;
     };
+    const proxyListener = (eventMap) => ({ emitter }) => {
+        const eventListeners = {};
+        const proxy = {
+            off(ev) {
+                if (!ev) {
+                    Object.keys(eventListeners).forEach(eventName => proxy.off(eventName));
+                }
+                if (eventListeners[ev]) {
+                    emitter.off(ev, ...eventListeners[ev]);
+                }
+                return proxy;
+            }
+        };
+        for (const ev of Object.keys(eventMap)) {
+            const method = eventMap[ev];
+            eventListeners[ev] = [];
+            proxy[method] = function (...listeners) {
+                eventListeners[ev] = eventListeners[ev].concat(listeners);
+                emitter.on(ev, ...listeners);
+                return proxy;
+            };
+        }
+        return proxy;
+    };
 
     var Type;
     (function (Type) {
@@ -421,7 +438,7 @@
             case Type.DATE:
                 return val => new Date(val);
             case Type.STRING:
-                return compose$1(String, val => val.toLowerCase());
+                return compose(String, val => val.toLowerCase());
             default:
                 return val => val;
         }
@@ -449,21 +466,21 @@
     const operators = {
         ["includes" /* INCLUDES */]: includes,
         ["is" /* IS */]: is,
-        ["isNot" /* IS_NOT */]: compose$1(is, not),
+        ["isNot" /* IS_NOT */]: compose(is, not),
         ["lt" /* LOWER_THAN */]: lt,
-        ["gte" /* GREATER_THAN_OR_EQUAL */]: compose$1(lt, not),
+        ["gte" /* GREATER_THAN_OR_EQUAL */]: compose(lt, not),
         ["gt" /* GREATER_THAN */]: gt,
-        ["lte" /* LOWER_THAN_OR_EQUAL */]: compose$1(gt, not),
+        ["lte" /* LOWER_THAN_OR_EQUAL */]: compose(gt, not),
         ["equals" /* EQUALS */]: equals,
-        ["notEquals" /* NOT_EQUALS */]: compose$1(equals, not),
+        ["notEquals" /* NOT_EQUALS */]: compose(equals, not),
         ["anyOf" /* ANY_OF */]: anyOf
     };
     const every = fns => (...args) => fns.every(fn => fn(...args));
     const predicate = ({ value = '', operator = "includes" /* INCLUDES */, type }) => {
         const typeIt = typeExpression(type);
-        const operateOnTyped = compose$1(typeIt, operators[operator]);
+        const operateOnTyped = compose(typeIt, operators[operator]);
         const predicateFunc = operateOnTyped(value);
-        return compose$1(typeIt, predicateFunc);
+        return compose(typeIt, predicateFunc);
     };
     // Avoid useless filter lookup (improve perf)
     const normalizeClauses = (conf) => {
@@ -482,7 +499,7 @@
         const funcList = Object.keys(normalizedClauses).map(path => {
             const getter = pointer(path).get;
             const clauses = normalizedClauses[path].map(predicate);
-            return compose$1(getter, every(clauses));
+            return compose(getter, every(clauses));
         });
         const filterPredicate = every(funcList);
         return array => array.filter(filterPredicate);
@@ -516,7 +533,7 @@
             return (array) => [...array];
         }
         const orderFunc = sortByProperty(pointer$$1, comparator);
-        const compareFunc = direction === "desc" /* DESC */ ? swap$1(orderFunc) : orderFunc;
+        const compareFunc = direction === "desc" /* DESC */ ? swap(orderFunc) : orderFunc;
         return (array) => [...array].sort(compareFunc);
     };
 
@@ -584,7 +601,7 @@
     })(SmartTableEvents || (SmartTableEvents = {}));
     const curriedPointer = (path) => {
         const { get, set } = pointer(path);
-        return { get, set: curry$1(set) };
+        return { get, set: curry(set) };
     };
     const tableDirective = ({ sortFactory, tableState, data, filterFactory, searchFactory }) => {
         let filteredCount = data.length;
@@ -598,8 +615,8 @@
         table.on("SUMMARY_CHANGED" /* SUMMARY_CHANGED */, ({ filteredCount: count }) => {
             filteredCount = count;
         });
-        const safeAssign = curry$1((base, extension) => Object.assign({}, base, extension));
-        const dispatch = curry$1(table.dispatch, 2);
+        const safeAssign = curry((base, extension) => Object.assign({}, base, extension));
+        const dispatch = curry(table.dispatch, 2);
         const dispatchSummary = (filtered) => {
             matchingItems = filtered;
             return dispatch("SUMMARY_CHANGED" /* SUMMARY_CHANGED */, {
@@ -616,7 +633,7 @@
                     const searchFunc = searchFactory(searchPointer.get(tableState));
                     const sortFunc = sortFactory(sortPointer.get(tableState));
                     const sliceFunc = sliceFactory(slicePointer.get(tableState));
-                    const execFunc = compose$1(filterFunc, searchFunc, tap$1(dispatchSummary), sortFunc, sliceFunc);
+                    const execFunc = compose(filterFunc, searchFunc, tap(dispatchSummary), sortFunc, sliceFunc);
                     const displayed = execFunc(data);
                     table.dispatch("DISPLAY_CHANGED" /* DISPLAY_CHANGED */, displayed.map(d => ({
                         index: data.indexOf(d),
@@ -631,22 +648,22 @@
                 }
             }, processingDelay);
         };
-        const updateTableState = curry$1((pter, ev, newPartialState) => compose$1(safeAssign(pter.get(tableState)), tap$1(dispatch(ev)), pter.set(tableState))(newPartialState));
+        const updateTableState = curry((pter, ev, newPartialState) => compose(safeAssign(pter.get(tableState)), tap(dispatch(ev)), pter.set(tableState))(newPartialState));
         const resetToFirstPage = () => updateTableState(slicePointer, "CHANGE_PAGE" /* PAGE_CHANGED */, { page: 1 });
-        const tableOperation = (pter, ev) => compose$1(updateTableState(pter, ev), resetToFirstPage, () => table.exec() // We wrap within a function so table.exec can be overwritten (when using with a server for example)
+        const tableOperation = (pter, ev) => compose(updateTableState(pter, ev), resetToFirstPage, () => table.exec() // We wrap within a function so table.exec can be overwritten (when using with a server for example)
         );
         const api = {
             sort: tableOperation(sortPointer, "TOGGLE_SORT" /* TOGGLE_SORT */),
             filter: tableOperation(filterPointer, "FILTER_CHANGED" /* FILTER_CHANGED */),
             search: tableOperation(searchPointer, "SEARCH_CHANGED" /* SEARCH_CHANGED */),
-            slice: compose$1(updateTableState(slicePointer, "CHANGE_PAGE" /* PAGE_CHANGED */), () => table.exec()),
+            slice: compose(updateTableState(slicePointer, "CHANGE_PAGE" /* PAGE_CHANGED */), () => table.exec()),
             exec,
             async eval(state = tableState) {
                 const sortFunc = sortFactory(sortPointer.get(state));
                 const searchFunc = searchFactory(searchPointer.get(state));
                 const filterFunc = filterFactory(filterPointer.get(state));
                 const sliceFunc = sliceFactory(slicePointer.get(state));
-                const execFunc = compose$1(filterFunc, searchFunc, sortFunc, sliceFunc);
+                const execFunc = compose(filterFunc, searchFunc, sortFunc, sliceFunc);
                 return execFunc(data).map(d => ({ index: data.indexOf(d), value: d }));
             },
             onDisplayChange(fn) {
@@ -681,6 +698,8 @@
         });
         return instance;
     };
+
+    const filterListener = proxyListener({ ["FILTER_CHANGED" /* FILTER_CHANGED */]: 'onFilterChange' });
     // todo expose and re-export from smart-table-filter
     var FilterType;
     (function (FilterType) {
@@ -689,6 +708,116 @@
         FilterType["DATE"] = "date";
         FilterType["STRING"] = "string";
     })(FilterType || (FilterType = {}));
+    const filterDirective = ({ table, pointer: pointer$$1, operator = "includes" /* INCLUDES */, type = "string" /* STRING */ }) => {
+        const proxy = filterListener({ emitter: table });
+        return Object.assign({
+            filter(input) {
+                const filterConf = {
+                    [pointer$$1]: [
+                        {
+                            value: input,
+                            operator,
+                            type
+                        }
+                    ]
+                };
+                return table.filter(filterConf);
+            },
+            state() {
+                return table.getTableState().filter;
+            }
+        }, proxy);
+    };
+
+    const searchListener = proxyListener({ ["SEARCH_CHANGED" /* SEARCH_CHANGED */]: 'onSearchChange' });
+    const searchDirective = ({ table, scope = [] }) => {
+        const proxy = searchListener({ emitter: table });
+        return Object.assign(proxy, {
+            search(input, opts = {}) {
+                return table.search(Object.assign({}, { value: input, scope }, opts));
+            },
+            state() {
+                return table.getTableState().search;
+            }
+        }, proxy);
+    };
+
+    const sliceListener = proxyListener({
+        ["CHANGE_PAGE" /* PAGE_CHANGED */]: 'onPageChange',
+        ["SUMMARY_CHANGED" /* SUMMARY_CHANGED */]: 'onSummaryChange'
+    });
+    const paginationDirective = ({ table }) => {
+        let { slice: { page: currentPage, size: currentSize } } = table.getTableState();
+        let itemListLength = table.filteredCount;
+        const proxy = sliceListener({ emitter: table });
+        const api = {
+            selectPage(p) {
+                return table.slice({ page: p, size: currentSize });
+            },
+            selectNextPage() {
+                return api.selectPage(currentPage + 1);
+            },
+            selectPreviousPage() {
+                return api.selectPage(currentPage - 1);
+            },
+            changePageSize(size) {
+                return table.slice({ page: 1, size });
+            },
+            isPreviousPageEnabled() {
+                return currentPage > 1;
+            },
+            isNextPageEnabled() {
+                return Math.ceil(itemListLength / currentSize) > currentPage;
+            },
+            state() {
+                return Object.assign(table.getTableState().slice, { filteredCount: itemListLength });
+            }
+        };
+        const directive = Object.assign(api, proxy);
+        directive.onSummaryChange(({ page: p, size: s, filteredCount }) => {
+            currentPage = p;
+            currentSize = s;
+            itemListLength = filteredCount;
+        });
+        return directive;
+    };
+
+    const debounce = (fn, time) => {
+        let timer = null;
+        return (...args) => {
+            if (timer !== null) {
+                clearTimeout(timer);
+            }
+            timer = setTimeout(() => fn(...args), time);
+        };
+    };
+    const sortListeners = proxyListener({ ["TOGGLE_SORT" /* TOGGLE_SORT */]: 'onSortToggle' });
+    const directions = ["asc" /* ASC */, "desc" /* DESC */];
+    const sortDirective = ({ pointer: pointer$$1, table, cycle = false, debounceTime = 0 }) => {
+        const cycleDirections = cycle === true ? ["none" /* NONE */].concat(directions) : [...directions].reverse();
+        const commit = debounce(table.sort, debounceTime);
+        let hit = 0;
+        const proxy = sortListeners({ emitter: table });
+        const directive = Object.assign({
+            toggle() {
+                hit++;
+                const direction = cycleDirections[hit % cycleDirections.length];
+                return commit({ pointer: pointer$$1, direction });
+            },
+            state() {
+                return table.getTableState().sort;
+            }
+        }, proxy);
+        directive.onSortToggle(({ pointer: p }) => {
+            hit = pointer$$1 !== p ? 0 : hit;
+        });
+        const { pointer: statePointer, direction = "asc" /* ASC */ } = directive.state();
+        hit = statePointer === pointer$$1 ? (direction === "asc" /* ASC */ ? 1 : 2) : 0;
+        return directive;
+    };
+
+    const executionListener = proxyListener({ ["EXEC_CHANGED" /* EXEC_CHANGED */]: 'onExecutionChange' });
+    const workingIndicatorDirective = ({ table }) => executionListener({ emitter: table });
 
     const defaultTableState = () => ({ sort: {}, slice: { page: 1 }, filter: {}, search: {} });
     const smartTable = ({ sortFactory = defaultSortFactory, filterFactory = filter, searchFactory = regexp, tableState = defaultTableState(), data = [] } = {
@@ -721,19 +850,18 @@
     const withListChange = (comp) => (conf) => {
         let updateFunc;
         // @ts-ignore
-        const normalizedConf = Object.assign({}, conf.stConfig || conf);
+        const { stTable } = conf, otherConf = __rest(conf, ["stTable"]);
+        const normalizedConf = { stTable };
         const table$$1 = normalizedConf.stTable;
         const listener = (items) => {
             updateFunc({ items });
         };
         table$$1.onDisplayChange(listener);
         const WrappingComponent = props => {
-            const { stTable } = normalizedConf, left = __rest(normalizedConf, ["stTable"]);
             const { items, stTable: whatever } = props, otherProps = __rest(props, ["items", "stTable"]);
-            const stConfig = { stTable };
             const stState = items || [];
-            const fullProps = Object.assign({}, left, otherProps);
-            return comp(fullProps, { state: stState, config: stConfig });
+            const fullProps = Object.assign({}, otherConf, otherProps);
+            return comp(fullProps, { state: stState, config: normalizedConf });
         };
         const subsribe = onMount((vnode) => {
             updateFunc = update(WrappingComponent, vnode);
@@ -745,22 +873,332 @@
         return unsubscribe(subsribe(WrappingComponent));
     };
 
-    const table$1 = smartTable({ data: heroes });
-    const Hero = (heroItem) => h("tr", null,
-        h("td", null, heroItem.value.id),
-        h("td", null, heroItem.value.name));
-    const HeroList = withListChange((props, stProps) => {
-        const { state, config } = stProps;
-        console.log(props);
-        console.log(stProps);
-        return h("tbody", { id: props.id }, state.map(Hero));
+    var __rest$1 = (undefined && undefined.__rest) || function (s$$1, e) {
+        var t = {};
+        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+            t[p$$1] = s$$1[p$$1];
+        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+        return t;
+    };
+    const withSearch = (comp) => (conf) => {
+        let updateFunction;
+        // @ts-ignore
+        const { stTable, stScope } = conf, otherConfProps = __rest$1(conf, ["stTable", "stScope"]);
+        const normalizedConf = {
+            stTable,
+            stScope
+        };
+        const { stTable: table$$1, stScope: scope } = normalizedConf;
+        const directive = searchDirective({ table: table$$1, scope });
+        const listener = (newState) => updateFunction({ stState: newState });
+        directive.onSearchChange(listener);
+        const WrappingComponent = props => {
+            const { stState = directive.state(), stTable, stScope } = props, otherProps = __rest$1(props, ["stState", "stTable", "stScope"]);
+            const fullProps = Object.assign({}, otherConfProps, otherProps);
+            return comp(fullProps, { state: stState, config: normalizedConf, directive });
+        };
+        const subscribe = onMount((vnode) => {
+            updateFunction = update(WrappingComponent, vnode);
+        });
+        const unsubscribe = onUnMount(() => {
+            directive.off("SEARCH_CHANGED" /* SEARCH_CHANGED */);
+        });
+        return unsubscribe(subscribe(WrappingComponent));
+    };
+
+    var __rest$2 = (undefined && undefined.__rest) || function (s$$1, e) {
+        var t = {};
+        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+            t[p$$1] = s$$1[p$$1];
+        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+        return t;
+    };
+    const withSort = (comp) => (conf) => {
+        let updateFunction;
+        // @ts-ignore
+        const { stTable, stPointer, stCycle = false } = conf, otherConfProps = __rest$2(conf, ["stTable", "stPointer", "stCycle"]);
+        const normalizedConf = {
+            stPointer,
+            stCycle,
+            stTable
+        };
+        const { stPointer: pointer, stTable: table$$1, stCycle: cycle } = normalizedConf; //convenient aliases
+        const directive = sortDirective({ table: table$$1, pointer, cycle });
+        const listener = (newState) => updateFunction({ stState: newState });
+        directive.onSortToggle(listener);
+        const WrappingComponent = props => {
+            const { stState = directive.state(), stTable, stCycle, stPointer } = props, otherProps = __rest$2(props, ["stState", "stTable", "stCycle", "stPointer"]);
+            const fullProps = Object.assign({}, otherConfProps, otherProps);
+            return comp(fullProps, { state: stState, config: normalizedConf, directive });
+        };
+        const subscribe = onMount((vnode) => {
+            updateFunction = update(WrappingComponent, vnode);
+        });
+        const unsubscribe = onUnMount(() => {
+            directive.off("TOGGLE_SORT" /* TOGGLE_SORT */);
+        });
+        return unsubscribe(subscribe(WrappingComponent));
+    };
+
+    var __rest$3 = (undefined && undefined.__rest) || function (s$$1, e) {
+        var t = {};
+        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+            t[p$$1] = s$$1[p$$1];
+        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+        return t;
+    };
+    const withFilter = (comp) => (conf) => {
+        let updateFunction;
+        // @ts-ignore
+        const { stTable, stType = "string" /* STRING */, stOperator = "includes" /* INCLUDES */, stPointer } = conf, otherConfProps = __rest$3(conf, ["stTable", "stType", "stOperator", "stPointer"]);
+        const normalizedConf = {
+            stTable, stType, stOperator, stPointer
+        };
+        const { stTable: table$$1, stOperator: operator, stType: type, stPointer: pointer } = normalizedConf;
+        const directive = filterDirective({
+            table: table$$1, operator, pointer, type
+        });
+        const listener = newState => updateFunction({ stState: newState });
+        directive.onFilterChange(listener);
+        const WrappingComponent = props => {
+            const { stState = directive.state(), stTable, stType, stOperator, stPointer } = props, otherProps = __rest$3(props, ["stState", "stTable", "stType", "stOperator", "stPointer"]);
+            const fullProps = Object.assign({}, otherConfProps, otherProps);
+            return comp(fullProps, { state: stState, config: normalizedConf, directive });
+        };
+        const subscribe = onMount((vnode) => {
+            updateFunction = update(WrappingComponent, vnode);
+        });
+        const unsubscribe = onUnMount(() => {
+            directive.off("FILTER_CHANGED" /* FILTER_CHANGED */);
+        });
+        return unsubscribe(subscribe(WrappingComponent));
+    };
+
+    var __rest$4 = (undefined && undefined.__rest) || function (s$$1, e) {
+        var t = {};
+        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+            t[p$$1] = s$$1[p$$1];
+        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+        return t;
+    };
+    const withIndicator = (comp) => (conf) => {
+        let updateFunction;
+        // @ts-ignore
+        const { stTable } = conf, otherConfProps = __rest$4(conf, ["stTable"]);
+        const normalizedConf = {
+            stTable
+        };
+        const { stTable: table$$1 } = normalizedConf;
+        const directive = workingIndicatorDirective({ table: table$$1 });
+        const listener = (newState) => updateFunction({ stState: newState });
+        directive.onExecutionChange(listener);
+        const WrappingComponent = props => {
+            const { stState = { working: false }, stTable } = props, otherProps = __rest$4(props, ["stState", "stTable"]);
+            const fullProps = Object.assign({}, otherConfProps, otherProps);
+            return comp(fullProps, { state: stState, config: normalizedConf, directive });
+        };
+        const subscribe = onMount((vnode) => {
+            updateFunction = update(WrappingComponent, vnode);
+        });
+        const unsubscribe = onUnMount(() => {
+            directive.off("EXEC_CHANGED" /* EXEC_CHANGED */);
+        });
+        return unsubscribe(subscribe(WrappingComponent));
+    };
+
+    var __rest$5 = (undefined && undefined.__rest) || function (s$$1, e) {
+        var t = {};
+        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+            t[p$$1] = s$$1[p$$1];
+        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+        return t;
+    };
+    const withPagination = (comp) => (conf) => {
+        let updateFunc;
+        // @ts-ignore
+        const { stTable } = conf, otherConfProps = __rest$5(conf, ["stTable"]);
+        const directive = paginationDirective({ table: stTable });
+        const listener = (newSummary) => {
+            const { page, size, filteredCount } = newSummary;
+            updateFunc({
+                stState: Object.assign({ lowerBoundIndex: (page - 1) * size, higherBoundIndex: Math.min(page * size - 1, filteredCount - 1) }, newSummary)
+            });
+        };
+        directive.onSummaryChange(listener);
+        const WrappingComponent = props => {
+            const { stState = directive.state(), stTable } = props, otherProps = __rest$5(props, ["stState", "stTable"]);
+            const fullProps = Object.assign({}, otherConfProps, otherProps);
+            return comp(fullProps, { state: stState, config: { stTable }, directive });
+        };
+        const subscribe = onMount((vnode) => {
+            updateFunc = update(WrappingComponent, vnode);
+        });
+        const unsubscribe = onUnMount(() => {
+            directive.off("SUMMARY_CHANGED" /* SUMMARY_CHANGED */);
+        });
+        return unsubscribe(subscribe(WrappingComponent));
+    };
+
+    var __rest$6 = (undefined && undefined.__rest) || function (s$$1, e) {
+        var t = {};
+        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+            t[p$$1] = s$$1[p$$1];
+        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+        return t;
+    };
+    const table$1 = smartTable({
+        data: users, tableState: {
+            sort: {},
+            filter: {},
+            search: {},
+            slice: { page: 1, size: 25 }
+        }
     });
-    const App = ({ table: table$$1 }) => h("table", null,
-        h("thead", null,
-            h("tr", null,
-                h("th", null, "ID"),
-                h("th", null, "Name"))),
-        h(HeroList, { id: "Hello", stTable: table$$1 }, "bim"));
+    const debounce$1 = (fn, time$$1 = 300) => {
+        let timer;
+        return (...args) => {
+            if (timer) {
+                clearTimeout(timer);
+            }
+            timer = setTimeout(() => fn(...args), time$$1);
+        };
+    };
+    const UserRow = (UserItem) => h("tr", null,
+        h("td", null, UserItem.value.name.first),
+        h("td", null, UserItem.value.name.last),
+        h("td", null, UserItem.value.job),
+        h("td", null, new Date(UserItem.value.birthDate).toLocaleDateString()),
+        h("td", null, UserItem.value.balance));
+    const UserList = withListChange((props, stProps) => {
+        const { state } = stProps;
+        return h("tbody", { id: props.id }, state.length ? state.map(UserRow) : h("tr", null,
+            h("td", { colspan: "5" }, "No matching item found")));
+    });
+    const Header = withSort((props, stProps) => {
+        const { state, directive, config } = stProps;
+        const className = state.pointer !== config.stPointer || state.direction === "none" /* NONE */ ?
+            '' : (state.direction === "desc" /* DESC */ ?
+            'st-sort-desc' : 'st-sort-asc');
+        const onclick = () => directive.toggle('whatever');
+        return h("th", { onclick: onclick, class: className }, props.children);
+    });
+    const SearchBar = withSearch((props, stProps) => {
+        const { state, directive } = stProps;
+        const onInput = debounce$1(ev => directive.search(ev.target.value, { flags: 'i' }));
+        return h("input", { placeholder: "Search...", type: "search", value: state.value || '', oninput: onInput });
+    });
+    const JobFilter = withFilter((props, stProps) => {
+        const { state, directive, config } = stProps;
+        const onChange = (ev) => directive.filter(ev.target.value);
+        return h("select", { onchange: onChange },
+            h("option", { value: "" }, "-"),
+            h("option", { value: Job.DEV }, Job.DEV),
+            h("option", { value: Job.MANAGER }, Job.MANAGER),
+            h("option", { value: Job.QA }, Job.QA));
+    });
+    const LoadingIndicator = withIndicator((props, stProps) => {
+        const { state: { working } } = stProps;
+        let classNames = (props['class'] || '').split(' ');
+        if (working === false) {
+            classNames.push('hidden');
+        }
+        else {
+            const index = classNames.findIndex(x => x === 'hidden');
+            if (index >= 0) {
+                classNames.splice(index, 1);
+            }
+        }
+        return h("div", { class: classNames.join(' ') }, "Loading ...");
+    });
+    const BalanceFilter = withFilter((props, stProps) => {
+        // go directly with table instance
+        const { config: { stTable: table$$1 }, state } = stProps;
+        const clause = state.balance || [];
+        const lowerBoundValue = (clause.find(c => c.operator === "gte" /* GREATER_THAN_OR_EQUAL */) || { value: 0 }).value;
+        const higherBoundValue = (clause.find(c => c.operator === "lte" /* LOWER_THAN_OR_EQUAL */) || { value: 5000 }).value;
+        const changePartialClause = (operator) => debounce$1(ev => {
+            const { value } = ev.target;
+            const partialClauseIndex = clause.findIndex(c => c.operator === operator);
+            if (partialClauseIndex >= 0) {
+                clause.splice(partialClauseIndex, 1);
+            }
+            clause.push({ operator, type: "number" /* NUMBER */, value: Number(value) });
+            table$$1.filter(Object.assign(state, { balance: clause }));
+        });
+        return h("div", null,
+            h("label", null,
+                h("span", null, "Balance lower bound:"),
+                h("input", { value: lowerBoundValue, onchange: changePartialClause("gte" /* GREATER_THAN_OR_EQUAL */), type: "range", min: "0", max: "5000", step: "100" })),
+            h("label", null,
+                h("span", null, "Balance higher bound:"),
+                h("input", { onChange: changePartialClause("lte" /* LOWER_THAN_OR_EQUAL */), type: "range", min: "0", max: "5000", step: "100", value: higherBoundValue })));
+    });
+    const InputFilter = withFilter((props, stProps) => {
+        const others = __rest$6(props, ["children"]);
+        const onInput = debounce$1((ev) => {
+            stProps.directive.filter(ev.target.value);
+        });
+        return h("input", Object.assign({}, others, { oninput: onInput }));
+    });
+    const Pagination = withPagination((props, stProps) => {
+        const { state, directive } = stProps;
+        return h("div", { class: "pagination" },
+            h("p", { class: "summary" },
+                "Showing items ",
+                h("em", null, state.lowerBoundIndex + 1),
+                " - ",
+                h("em", null, state.higherBoundIndex + 1),
+                " of ",
+                h("em", null, state.filteredCount),
+                " matching items"),
+            h("div", null,
+                h("button", { disabled: !directive.isPreviousPageEnabled(), onclick: () => directive.selectPreviousPage() }, "Previous"),
+                h("button", { disabled: !directive.isNextPageEnabled(), onclick: () => directive.selectNextPage() }, "Next")));
+    });
+    const App = ({ table: table$$1 }) => h("div", null,
+        h("div", { id: "filter-container" },
+            h("h2", null, "Filter options"),
+            h("label", null,
+                h("span", null, "First name:"),
+                h(InputFilter, { placeholder: "Search for first name", stTable: table$$1, stPointer: "name.first" })),
+            h("label", null,
+                h("span", null, "Last name:"),
+                h(InputFilter, { placeholder: "Search for last name", stTable: table$$1, stPointer: "name.last" })),
+            h("label", null,
+                h("span", null, "Filter by job type:"),
+                h(JobFilter, { stTable: table$$1, stPointer: "job" })),
+            h("label", null,
+                h("span", null, "Born after:"),
+                h(InputFilter, { autocomplete: "birthdate", type: "date", stTable: table$$1, stPointer: "birthDate", stType: "date" /* DATE */, stOperator: "gt" /* GREATER_THAN */ })),
+            h(BalanceFilter, { stPointer: "balance", stTable: table$$1 })),
+        h(Pagination, { stTable: table$$1 }),
+        h("div", { id: "table-container" },
+            h(LoadingIndicator, { stTable: table$$1, class: "loader" }),
+            h("table", null,
+                h("thead", null,
+                    h("tr", null,
+                        h(Header, { stTable: table$$1, stPointer: "name.first", stCycle: true }, "First Name"),
+                        h(Header, { stTable: table$$1, stPointer: "name.last" }, "Last Name"),
+                        h(Header, { stTable: table$$1, stPointer: "job" }, "Job"),
+                        h(Header, { stTable: table$$1, stPointer: "birthDate" }, "Birth Date"),
+                        h(Header, { stTable: table$$1, stPointer: "balance" }, "Balance")),
+                    h("tr", null,
+                        h("td", { colspan: "5" },
+                            h(SearchBar, { stTable: table$$1, stScope: ['name.first', 'name.last'] })))),
+                h(UserList, { id: "Hello", stTable: table$$1 })),
+            h(Pagination, { stTable: table$$1 })));
     const container = document.getElementById('app-container');
     mount(h(App, { table: table$1 }), {}, container);
 

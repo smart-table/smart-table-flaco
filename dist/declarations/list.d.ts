@@ -1,18 +1,11 @@
 import { VNode } from 'flaco';
-import { DisplayedItem, SmartTable } from 'smart-table-core';
-export interface ListChangeConfigurationObject<T> {
-    stTable: SmartTable<T>;
-}
-export declare type ListChangeConfiguration<T> = ListChangeConfigurationObject<T> | {
-    stConfig: ListChangeConfigurationObject<T>;
-};
-export interface ListChangeArguments<T> {
+import { DisplayedItem } from 'smart-table-core';
+import { StDirective } from './interfaces';
+export interface StListArguments<T> {
     state: DisplayedItem<T>[];
-    config: ListChangeConfigurationObject<T>;
+    config: StDirective<T>;
 }
-export interface ListChangeComponentFunction<T, K> {
-    (props: K, listDate: ListChangeArguments<T>): any;
+export interface StListComponentFunction<T, K> {
+    (props: K, listData: StListArguments<T>): VNode;
 }
-export declare const withListChange: <T, K>(comp: ListChangeComponentFunction<T, K>) => (conf: (ListChangeConfigurationObject<T> & K) | ({
-    stConfig: ListChangeConfigurationObject<T>;
-} & K)) => (props: K) => VNode;
+export declare const withListChange: <T, K>(comp: StListComponentFunction<T, K>) => (conf: StDirective<T> & K) => (props: K) => VNode;

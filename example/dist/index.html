@@ -3,11 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <title>Smart Table Flaco | example</title>
+    <style>
+        h2 {
+            margin: 0.25em 0;
+        }
+
+        #table-container {
+            position: relative;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: auto;
+        }
+
+        tr:nth-child(2n) {
+            background: lightgrey;
+        }
+
+        th, td {
+            padding: 0.2em 2em;
+        }
+
+        th {
+            position: relative;
+        }
+
+        th:not(:last-child), td:not(:last-child) {
+            border-right: 1px dashed darkgray;
+        }
+
+        th::after {
+            content: '↕️';
+            position: absolute;
+            right: 0;
+        }
+
+        th.st-sort-asc::after {
+            content: '⬆️';
+        }
+
+        th.st-sort-desc::after {
+            content: '⬇️';
+        }
+
+        input, select {
+            border: 1px solid lightblue;
+            padding: 0.2em;
+            font-size: 0.8em;
+            transition: all 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: dodgerblue;
+            box-shadow: 0 0 4px 0 dodgerblue;
+        }
+
+        input[type=search]:focus {
+            width: 50%;
+        }
+
+        #filter-container {
+            border: 1px solid darkgray;
+            display: flex;
+            flex-direction: column;
+            margin: 1em auto;
+            padding: 0.5em;
+            width: 400px;
+        }
+
+        #filter-container label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0.2em 0;
+        }
+
+        #filter-container label > *:last-child {
+            width: 150px;
+        }
+
+        .loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            opacity: 0.8;
+            z-index: 9;
+        }
+
+        .hidden{
+            display: none;
+        }
+
+        .pagination{
+            display: flex;
+            justify-content: space-around;
+            padding: 0.5em 2em;
+        }
+
+        .pagination p{
+            margin: 0;
+        }
+
+        em{
+            color:dodgerblue;
+        }
+
+    </style>
 </head>
 <body>
 <main>
     <h1>Example of a component built with <strong>smart-table-flaco</strong></h1>
-    <p>Introduction paragraph</p>
     <div id="app-container"></div>
 </main>
 <script src="app.js"></script>

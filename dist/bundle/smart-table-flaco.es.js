@@ -274,19 +274,18 @@ var __rest = (undefined && undefined.__rest) || function (s$$1, e) {
 const withListChange = (comp) => (conf) => {
     let updateFunc;
     // @ts-ignore
-    const normalizedConf = Object.assign({}, conf.stConfig || conf);
+    const { stTable } = conf, otherConf = __rest(conf, ["stTable"]);
+    const normalizedConf = { stTable };
     const table$$1 = normalizedConf.stTable;
     const listener = (items) => {
         updateFunc({ items });
     };
     table$$1.onDisplayChange(listener);
     const WrappingComponent = props => {
-        const { stTable } = normalizedConf, left = __rest(normalizedConf, ["stTable"]);
         const { items, stTable: whatever } = props, otherProps = __rest(props, ["items", "stTable"]);
-        const stConfig = { stTable };
         const stState = items || [];
-        const fullProps = Object.assign({}, left, otherProps);
-        return comp(fullProps, { state: stState, config: stConfig });
+        const fullProps = Object.assign({}, otherConf, otherProps);
+        return comp(fullProps, { state: stState, config: normalizedConf });
     };
     const subsribe = onMount((vnode) => {
         updateFunc = update(WrappingComponent, vnode);
@@ -298,5 +297,366 @@ const withListChange = (comp) => (conf) => {
     return unsubscribe(subsribe(WrappingComponent));
 };
 
-export { withListChange };
+const proxyListener = (eventMap) => ({ emitter }) => {
+    const eventListeners = {};
+    const proxy = {
+        off(ev) {
+            if (!ev) {
+                Object.keys(eventListeners).forEach(eventName => proxy.off(eventName));
+            }
+            if (eventListeners[ev]) {
+                emitter.off(ev, ...eventListeners[ev]);
+            }
+            return proxy;
+        }
+    };
+    for (const ev of Object.keys(eventMap)) {
+        const method = eventMap[ev];
+        eventListeners[ev] = [];
+        proxy[method] = function (...listeners) {
+            eventListeners[ev] = eventListeners[ev].concat(listeners);
+            emitter.on(ev, ...listeners);
+            return proxy;
+        };
+    }
+    return proxy;
+};
+
+var Type;
+(function (Type) {
+    Type["BOOLEAN"] = "boolean";
+    Type["NUMBER"] = "number";
+    Type["DATE"] = "date";
+    Type["STRING"] = "string";
+})(Type || (Type = {}));
+var FilterOperator;
+(function (FilterOperator) {
+    FilterOperator["INCLUDES"] = "includes";
+    FilterOperator["IS"] = "is";
+    FilterOperator["IS_NOT"] = "isNot";
+    FilterOperator["LOWER_THAN"] = "lt";
+    FilterOperator["GREATER_THAN"] = "gt";
+    FilterOperator["GREATER_THAN_OR_EQUAL"] = "gte";
+    FilterOperator["LOWER_THAN_OR_EQUAL"] = "lte";
+    FilterOperator["EQUALS"] = "equals";
+    FilterOperator["NOT_EQUALS"] = "notEquals";
+    FilterOperator["ANY_OF"] = "anyOf";
+})(FilterOperator || (FilterOperator = {}));
+
+var SortDirection;
+(function (SortDirection) {
+    SortDirection["ASC"] = "asc";
+    SortDirection["DESC"] = "desc";
+    SortDirection["NONE"] = "none";
+})(SortDirection || (SortDirection = {}));
+
+var SmartTableEvents;
+(function (SmartTableEvents) {
+    SmartTableEvents["TOGGLE_SORT"] = "TOGGLE_SORT";
+    SmartTableEvents["DISPLAY_CHANGED"] = "DISPLAY_CHANGED";
+    SmartTableEvents["PAGE_CHANGED"] = "CHANGE_PAGE";
+    SmartTableEvents["EXEC_CHANGED"] = "EXEC_CHANGED";
+    SmartTableEvents["FILTER_CHANGED"] = "FILTER_CHANGED";
+    SmartTableEvents["SUMMARY_CHANGED"] = "SUMMARY_CHANGED";
+    SmartTableEvents["SEARCH_CHANGED"] = "SEARCH_CHANGED";
+    SmartTableEvents["EXEC_ERROR"] = "EXEC_ERROR";
+})(SmartTableEvents || (SmartTableEvents = {}));
+
+const filterListener = proxyListener({ ["FILTER_CHANGED" /* FILTER_CHANGED */]: 'onFilterChange' });
+// todo expose and re-export from smart-table-filter
+var FilterType;
+(function (FilterType) {
+    FilterType["BOOLEAN"] = "boolean";
+    FilterType["NUMBER"] = "number";
+    FilterType["DATE"] = "date";
+    FilterType["STRING"] = "string";
+})(FilterType || (FilterType = {}));
+const filterDirective = ({ table, pointer: pointer$$1, operator = "includes" /* INCLUDES */, type = "string" /* STRING */ }) => {
+    const proxy = filterListener({ emitter: table });
+    return Object.assign({
+        filter(input) {
+            const filterConf = {
+                [pointer$$1]: [
+                    {
+                        value: input,
+                        operator,
+                        type
+                    }
+                ]
+            };
+            return table.filter(filterConf);
+        },
+        state() {
+            return table.getTableState().filter;
+        }
+    }, proxy);
+};
+
+const searchListener = proxyListener({ ["SEARCH_CHANGED" /* SEARCH_CHANGED */]: 'onSearchChange' });
+const searchDirective = ({ table, scope = [] }) => {
+    const proxy = searchListener({ emitter: table });
+    return Object.assign(proxy, {
+        search(input, opts = {}) {
+            return table.search(Object.assign({}, { value: input, scope }, opts));
+        },
+        state() {
+            return table.getTableState().search;
+        }
+    }, proxy);
+};
+
+const sliceListener = proxyListener({
+    ["CHANGE_PAGE" /* PAGE_CHANGED */]: 'onPageChange',
+    ["SUMMARY_CHANGED" /* SUMMARY_CHANGED */]: 'onSummaryChange'
+});
+const paginationDirective = ({ table }) => {
+    let { slice: { page: currentPage, size: currentSize } } = table.getTableState();
+    let itemListLength = table.filteredCount;
+    const proxy = sliceListener({ emitter: table });
+    const api = {
+        selectPage(p) {
+            return table.slice({ page: p, size: currentSize });
+        },
+        selectNextPage() {
+            return api.selectPage(currentPage + 1);
+        },
+        selectPreviousPage() {
+            return api.selectPage(currentPage - 1);
+        },
+        changePageSize(size) {
+            return table.slice({ page: 1, size });
+        },
+        isPreviousPageEnabled() {
+            return currentPage > 1;
+        },
+        isNextPageEnabled() {
+            return Math.ceil(itemListLength / currentSize) > currentPage;
+        },
+        state() {
+            return Object.assign(table.getTableState().slice, { filteredCount: itemListLength });
+        }
+    };
+    const directive = Object.assign(api, proxy);
+    directive.onSummaryChange(({ page: p, size: s, filteredCount }) => {
+        currentPage = p;
+        currentSize = s;
+        itemListLength = filteredCount;
+    });
+    return directive;
+};
+
+const debounce = (fn, time) => {
+    let timer = null;
+    return (...args) => {
+        if (timer !== null) {
+            clearTimeout(timer);
+        }
+        timer = setTimeout(() => fn(...args), time);
+    };
+};
+const sortListeners = proxyListener({ ["TOGGLE_SORT" /* TOGGLE_SORT */]: 'onSortToggle' });
+const directions = ["asc" /* ASC */, "desc" /* DESC */];
+const sortDirective = ({ pointer: pointer$$1, table, cycle = false, debounceTime = 0 }) => {
+    const cycleDirections = cycle === true ? ["none" /* NONE */].concat(directions) : [...directions].reverse();
+    const commit = debounce(table.sort, debounceTime);
+    let hit = 0;
+    const proxy = sortListeners({ emitter: table });
+    const directive = Object.assign({
+        toggle() {
+            hit++;
+            const direction = cycleDirections[hit % cycleDirections.length];
+            return commit({ pointer: pointer$$1, direction });
+        },
+        state() {
+            return table.getTableState().sort;
+        }
+    }, proxy);
+    directive.onSortToggle(({ pointer: p }) => {
+        hit = pointer$$1 !== p ? 0 : hit;
+    });
+    const { pointer: statePointer, direction = "asc" /* ASC */ } = directive.state();
+    hit = statePointer === pointer$$1 ? (direction === "asc" /* ASC */ ? 1 : 2) : 0;
+    return directive;
+};
+
+const executionListener = proxyListener({ ["EXEC_CHANGED" /* EXEC_CHANGED */]: 'onExecutionChange' });
+const workingIndicatorDirective = ({ table }) => executionListener({ emitter: table });
+
+var __rest$1 = (undefined && undefined.__rest) || function (s$$1, e) {
+    var t = {};
+    for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+        t[p$$1] = s$$1[p$$1];
+    if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+            t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+    return t;
+};
+const withSearch = (comp) => (conf) => {
+    let updateFunction;
+    // @ts-ignore
+    const { stTable, stScope } = conf, otherConfProps = __rest$1(conf, ["stTable", "stScope"]);
+    const normalizedConf = {
+        stTable,
+        stScope
+    };
+    const { stTable: table$$1, stScope: scope } = normalizedConf;
+    const directive = searchDirective({ table: table$$1, scope });
+    const listener = (newState) => updateFunction({ stState: newState });
+    directive.onSearchChange(listener);
+    const WrappingComponent = props => {
+        const { stState = directive.state(), stTable, stScope } = props, otherProps = __rest$1(props, ["stState", "stTable", "stScope"]);
+        const fullProps = Object.assign({}, otherConfProps, otherProps);
+        return comp(fullProps, { state: stState, config: normalizedConf, directive });
+    };
+    const subscribe = onMount((vnode) => {
+        updateFunction = update(WrappingComponent, vnode);
+    });
+    const unsubscribe = onUnMount(() => {
+        directive.off("SEARCH_CHANGED" /* SEARCH_CHANGED */);
+    });
+    return unsubscribe(subscribe(WrappingComponent));
+};
+
+var __rest$2 = (undefined && undefined.__rest) || function (s$$1, e) {
+    var t = {};
+    for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+        t[p$$1] = s$$1[p$$1];
+    if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+            t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+    return t;
+};
+const withSort = (comp) => (conf) => {
+    let updateFunction;
+    // @ts-ignore
+    const { stTable, stPointer, stCycle = false } = conf, otherConfProps = __rest$2(conf, ["stTable", "stPointer", "stCycle"]);
+    const normalizedConf = {
+        stPointer,
+        stCycle,
+        stTable
+    };
+    const { stPointer: pointer, stTable: table$$1, stCycle: cycle } = normalizedConf; //convenient aliases
+    const directive = sortDirective({ table: table$$1, pointer, cycle });
+    const listener = (newState) => updateFunction({ stState: newState });
+    directive.onSortToggle(listener);
+    const WrappingComponent = props => {
+        const { stState = directive.state(), stTable, stCycle, stPointer } = props, otherProps = __rest$2(props, ["stState", "stTable", "stCycle", "stPointer"]);
+        const fullProps = Object.assign({}, otherConfProps, otherProps);
+        return comp(fullProps, { state: stState, config: normalizedConf, directive });
+    };
+    const subscribe = onMount((vnode) => {
+        updateFunction = update(WrappingComponent, vnode);
+    });
+    const unsubscribe = onUnMount(() => {
+        directive.off("TOGGLE_SORT" /* TOGGLE_SORT */);
+    });
+    return unsubscribe(subscribe(WrappingComponent));
+};
+
+var __rest$3 = (undefined && undefined.__rest) || function (s$$1, e) {
+    var t = {};
+    for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+        t[p$$1] = s$$1[p$$1];
+    if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+            t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+    return t;
+};
+const withFilter = (comp) => (conf) => {
+    let updateFunction;
+    // @ts-ignore
+    const { stTable, stType = "string" /* STRING */, stOperator = "includes" /* INCLUDES */, stPointer } = conf, otherConfProps = __rest$3(conf, ["stTable", "stType", "stOperator", "stPointer"]);
+    const normalizedConf = {
+        stTable, stType, stOperator, stPointer
+    };
+    const { stTable: table$$1, stOperator: operator, stType: type, stPointer: pointer } = normalizedConf;
+    const directive = filterDirective({
+        table: table$$1, operator, pointer, type
+    });
+    const listener = newState => updateFunction({ stState: newState });
+    directive.onFilterChange(listener);
+    const WrappingComponent = props => {
+        const { stState = directive.state(), stTable, stType, stOperator, stPointer } = props, otherProps = __rest$3(props, ["stState", "stTable", "stType", "stOperator", "stPointer"]);
+        const fullProps = Object.assign({}, otherConfProps, otherProps);
+        return comp(fullProps, { state: stState, config: normalizedConf, directive });
+    };
+    const subscribe = onMount((vnode) => {
+        updateFunction = update(WrappingComponent, vnode);
+    });
+    const unsubscribe = onUnMount(() => {
+        directive.off("FILTER_CHANGED" /* FILTER_CHANGED */);
+    });
+    return unsubscribe(subscribe(WrappingComponent));
+};
+
+var __rest$4 = (undefined && undefined.__rest) || function (s$$1, e) {
+    var t = {};
+    for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+        t[p$$1] = s$$1[p$$1];
+    if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+            t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+    return t;
+};
+const withIndicator = (comp) => (conf) => {
+    let updateFunction;
+    // @ts-ignore
+    const { stTable } = conf, otherConfProps = __rest$4(conf, ["stTable"]);
+    const normalizedConf = {
+        stTable
+    };
+    const { stTable: table$$1 } = normalizedConf;
+    const directive = workingIndicatorDirective({ table: table$$1 });
+    const listener = (newState) => updateFunction({ stState: newState });
+    directive.onExecutionChange(listener);
+    const WrappingComponent = props => {
+        const { stState = { working: false }, stTable } = props, otherProps = __rest$4(props, ["stState", "stTable"]);
+        const fullProps = Object.assign({}, otherConfProps, otherProps);
+        return comp(fullProps, { state: stState, config: normalizedConf, directive });
+    };
+    const subscribe = onMount((vnode) => {
+        updateFunction = update(WrappingComponent, vnode);
+    });
+    const unsubscribe = onUnMount(() => {
+        directive.off("EXEC_CHANGED" /* EXEC_CHANGED */);
+    });
+    return unsubscribe(subscribe(WrappingComponent));
+};
+
+var __rest$5 = (undefined && undefined.__rest) || function (s$$1, e) {
+    var t = {};
+    for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
+        t[p$$1] = s$$1[p$$1];
+    if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
+            t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
+    return t;
+};
+const withPagination = (comp) => (conf) => {
+    let updateFunc;
+    // @ts-ignore
+    const { stTable } = conf, otherConfProps = __rest$5(conf, ["stTable"]);
+    const directive = paginationDirective({ table: stTable });
+    const listener = (newSummary) => {
+        const { page, size, filteredCount } = newSummary;
+        updateFunc({
+            stState: Object.assign({ lowerBoundIndex: (page - 1) * size, higherBoundIndex: Math.min(page * size - 1, filteredCount - 1) }, newSummary)
+        });
+    };
+    directive.onSummaryChange(listener);
+    const WrappingComponent = props => {
+        const { stState = directive.state(), stTable } = props, otherProps = __rest$5(props, ["stState", "stTable"]);
+        const fullProps = Object.assign({}, otherConfProps, otherProps);
+        return comp(fullProps, { state: stState, config: { stTable }, directive });
+    };
+    const subscribe = onMount((vnode) => {
+        updateFunc = update(WrappingComponent, vnode);
+    });
+    const unsubscribe = onUnMount(() => {
+        directive.off("SUMMARY_CHANGED" /* SUMMARY_CHANGED */);
+    });
+    return unsubscribe(subscribe(WrappingComponent));
+};
+
+export { withListChange, withSearch, withSort, withFilter, withIndicator, withPagination };
 //# sourceMappingURL=smart-table-flaco.es.js.map

@@ -8,5 +8,5 @@ export default {
         file: './example/dist/app.js',
         sourcemap: true
     }],
-    plugins: [resolve()]
+    plugins: [resolve({module:true})]
 };

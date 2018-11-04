@@ -11,19 +11,18 @@ import { onMount, update, onUnMount } from 'flaco';
 export const withListChange = (comp) => (conf) => {
     let updateFunc;
     // @ts-ignore
-    const normalizedConf = Object.assign({}, conf.stConfig || conf);
+    const { stTable } = conf, otherConf = __rest(conf, ["stTable"]);
+    const normalizedConf = { stTable };
     const table = normalizedConf.stTable;
     const listener = (items) => {
         updateFunc({ items });
     };
     table.onDisplayChange(listener);
     const WrappingComponent = props => {
-        const { stTable } = normalizedConf, left = __rest(normalizedConf, ["stTable"]);
         const { items, stTable: whatever } = props, otherProps = __rest(props, ["items", "stTable"]);
-        const stConfig = { stTable };
         const stState = items || [];
-        const fullProps = Object.assign({}, left, otherProps);
-        return comp(fullProps, { state: stState, config: stConfig });
+        const fullProps = Object.assign({}, otherConf, otherProps);
+        return comp(fullProps, { state: stState, config: normalizedConf });
     };
     const subsribe = onMount((vnode) => {
         updateFunc = update(WrappingComponent, vnode);

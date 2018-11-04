@@ -1,28 +1,23 @@
-import {onMount, update, onUnMount, VNode, ComponentFunction} from 'flaco';
+import {onMount, update, onUnMount, VNode} from 'flaco';
 import {DisplayedItem, SmartTable, SmartTableEvents} from 'smart-table-core';
+import {StDirective} from './interfaces';
 
-export interface ListChangeConfigurationObject<T> {
-    stTable: SmartTable<T>;
-}
 
-export type ListChangeConfiguration<T> = ListChangeConfigurationObject<T> | {
-    stConfig: ListChangeConfigurationObject<T>
-}
-
-export interface ListChangeArguments<T> {
+export interface StListArguments<T> {
     state: DisplayedItem<T>[];
-    config: ListChangeConfigurationObject<T>;
+    config: StDirective<T>;
 }
 
-export interface ListChangeComponentFunction<T, K> {
-    (props: K, listDate: ListChangeArguments<T>)
+export interface StListComponentFunction<T, K> {
+    (props: K, listData: StListArguments<T>): VNode;
 }
 
-export const withListChange = <T, K>(comp: ListChangeComponentFunction<T, K>) => (conf: ListChangeConfiguration<T> & K): (props: K) => VNode => {
+export const withListChange = <T, K>(comp: StListComponentFunction<T, K>) => (conf: StDirective<T> & K): (props: K) => VNode => {
     let updateFunc;
 
     // @ts-ignore
-    const normalizedConf: ListChangeConfigurationObject<T> = Object.assign({}, conf.stConfig || conf);
+    const {stTable, ...otherConf} = conf;
+    const normalizedConf: StDirective<T> = {stTable};
     const table: SmartTable<T> = normalizedConf.stTable;
 
     const listener = (items) => {
@@ -32,12 +27,10 @@ export const withListChange = <T, K>(comp: ListChangeComponentFunction<T, K>) =>
     table.onDisplayChange(listener);
 
     const WrappingComponent = props => {
-        const {stTable, ...left} = normalizedConf;
         const {items, stTable: whatever, ...otherProps} = props;
-        const stConfig = {stTable};
         const stState = items || [];
-        const fullProps = Object.assign({}, left, otherProps);
-        return comp(fullProps, {state: stState, config: stConfig});
+        const fullProps = Object.assign({}, otherConf, otherProps);
+        return comp(fullProps, {state: stState, config: normalizedConf});
     };
 
     const subsribe = onMount((vnode: VNode) => {
