@@ -1,18 +1,9 @@
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 import { onMount, onUnMount, update } from 'flaco';
 import { searchDirective } from 'smart-table-core';
 export const withSearch = (comp) => (conf) => {
     let updateFunction;
     // @ts-ignore
-    const { stTable, stScope } = conf, otherConfProps = __rest(conf, ["stTable", "stScope"]);
+    const { stTable, stScope, ...otherConfProps } = conf;
     const normalizedConf = {
         stTable,
         stScope
@@ -22,7 +13,7 @@ export const withSearch = (comp) => (conf) => {
     const listener = (newState) => updateFunction({ stState: newState });
     directive.onSearchChange(listener);
     const WrappingComponent = props => {
-        const { stState = directive.state(), stTable, stScope } = props, otherProps = __rest(props, ["stState", "stTable", "stScope"]);
+        const { stState = directive.state(), stTable, stScope, ...otherProps } = props;
         const fullProps = Object.assign({}, otherConfProps, otherProps);
         return comp(fullProps, { state: stState, config: normalizedConf, directive });
     };

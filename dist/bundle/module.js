@@ -1,19 +1,10 @@
 import { onMount, update, onUnMount } from 'flaco';
 import { searchDirective, sortDirective, filterDirective, workingIndicatorDirective, paginationDirective } from 'smart-table-core';
 
-var __rest = (undefined && undefined.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 const withListChange = (comp) => (conf) => {
     let updateFunc;
     // @ts-ignore
-    const { stTable } = conf, otherConf = __rest(conf, ["stTable"]);
+    const { stTable, ...otherConf } = conf;
     const normalizedConf = { stTable };
     const table = normalizedConf.stTable;
     const listener = (items) => {
@@ -21,7 +12,7 @@ const withListChange = (comp) => (conf) => {
     };
     table.onDisplayChange(listener);
     const WrappingComponent = props => {
-        const { items, stTable: whatever } = props, otherProps = __rest(props, ["items", "stTable"]);
+        const { items, stTable: whatever, ...otherProps } = props;
         const stState = items || [];
         const fullProps = Object.assign({}, otherConf, otherProps);
         return comp(fullProps, { state: stState, config: normalizedConf });
@@ -36,19 +27,10 @@ const withListChange = (comp) => (conf) => {
     return unsubscribe(subsribe(WrappingComponent));
 };
 
-var __rest$1 = (undefined && undefined.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 const withSearch = (comp) => (conf) => {
     let updateFunction;
     // @ts-ignore
-    const { stTable, stScope } = conf, otherConfProps = __rest$1(conf, ["stTable", "stScope"]);
+    const { stTable, stScope, ...otherConfProps } = conf;
     const normalizedConf = {
         stTable,
         stScope
@@ -58,7 +40,7 @@ const withSearch = (comp) => (conf) => {
     const listener = (newState) => updateFunction({ stState: newState });
     directive.onSearchChange(listener);
     const WrappingComponent = props => {
-        const { stState = directive.state(), stTable, stScope } = props, otherProps = __rest$1(props, ["stState", "stTable", "stScope"]);
+        const { stState = directive.state(), stTable, stScope, ...otherProps } = props;
         const fullProps = Object.assign({}, otherConfProps, otherProps);
         return comp(fullProps, { state: stState, config: normalizedConf, directive });
     };
@@ -71,19 +53,10 @@ const withSearch = (comp) => (conf) => {
     return unsubscribe(subscribe(WrappingComponent));
 };
 
-var __rest$2 = (undefined && undefined.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 const withSort = (comp) => (conf) => {
     let updateFunction;
     // @ts-ignore
-    const { stTable, stPointer, stCycle = false } = conf, otherConfProps = __rest$2(conf, ["stTable", "stPointer", "stCycle"]);
+    const { stTable, stPointer, stCycle = false, ...otherConfProps } = conf;
     const normalizedConf = {
         stPointer,
         stCycle,
@@ -94,7 +67,7 @@ const withSort = (comp) => (conf) => {
     const listener = (newState) => updateFunction({ stState: newState });
     directive.onSortToggle(listener);
     const WrappingComponent = props => {
-        const { stState = directive.state(), stTable, stCycle, stPointer } = props, otherProps = __rest$2(props, ["stState", "stTable", "stCycle", "stPointer"]);
+        const { stState = directive.state(), stTable, stCycle, stPointer, ...otherProps } = props;
         const fullProps = Object.assign({}, otherConfProps, otherProps);
         return comp(fullProps, { state: stState, config: normalizedConf, directive });
     };
@@ -107,19 +80,10 @@ const withSort = (comp) => (conf) => {
     return unsubscribe(subscribe(WrappingComponent));
 };
 
-var __rest$3 = (undefined && undefined.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 const withFilter = (comp) => (conf) => {
     let updateFunction;
     // @ts-ignore
-    const { stTable, stType = "string" /* STRING */, stOperator = "includes" /* INCLUDES */, stPointer } = conf, otherConfProps = __rest$3(conf, ["stTable", "stType", "stOperator", "stPointer"]);
+    const { stTable, stType = "string" /* STRING */, stOperator = "includes" /* INCLUDES */, stPointer, ...otherConfProps } = conf;
     const normalizedConf = {
         stTable, stType, stOperator, stPointer
     };
@@ -130,7 +94,7 @@ const withFilter = (comp) => (conf) => {
     const listener = newState => updateFunction({ stState: newState });
     directive.onFilterChange(listener);
     const WrappingComponent = props => {
-        const { stState = directive.state(), stTable, stType, stOperator, stPointer } = props, otherProps = __rest$3(props, ["stState", "stTable", "stType", "stOperator", "stPointer"]);
+        const { stState = directive.state(), stTable, stType, stOperator, stPointer, ...otherProps } = props;
         const fullProps = Object.assign({}, otherConfProps, otherProps);
         return comp(fullProps, { state: stState, config: normalizedConf, directive });
     };
@@ -143,19 +107,10 @@ const withFilter = (comp) => (conf) => {
     return unsubscribe(subscribe(WrappingComponent));
 };
 
-var __rest$4 = (undefined && undefined.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 const withIndicator = (comp) => (conf) => {
     let updateFunction;
     // @ts-ignore
-    const { stTable } = conf, otherConfProps = __rest$4(conf, ["stTable"]);
+    const { stTable, ...otherConfProps } = conf;
     const normalizedConf = {
         stTable
     };
@@ -164,7 +119,7 @@ const withIndicator = (comp) => (conf) => {
     const listener = (newState) => updateFunction({ stState: newState });
     directive.onExecutionChange(listener);
     const WrappingComponent = props => {
-        const { stState = { working: false }, stTable } = props, otherProps = __rest$4(props, ["stState", "stTable"]);
+        const { stState = { working: false }, stTable, ...otherProps } = props;
         const fullProps = Object.assign({}, otherConfProps, otherProps);
         return comp(fullProps, { state: stState, config: normalizedConf, directive });
     };
@@ -177,29 +132,24 @@ const withIndicator = (comp) => (conf) => {
     return unsubscribe(subscribe(WrappingComponent));
 };
 
-var __rest$5 = (undefined && undefined.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
-            t[p[i]] = s[p[i]];
-    return t;
-};
 const withPagination = (comp) => (conf) => {
     let updateFunc;
     // @ts-ignore
-    const { stTable } = conf, otherConfProps = __rest$5(conf, ["stTable"]);
+    const { stTable, ...otherConfProps } = conf;
     const directive = paginationDirective({ table: stTable });
     const listener = (newSummary) => {
         const { page, size, filteredCount } = newSummary;
         updateFunc({
-            stState: Object.assign({ lowerBoundIndex: (page - 1) * size, higherBoundIndex: Math.min(page * size - 1, filteredCount - 1) }, newSummary)
+            stState: {
+                lowerBoundIndex: (page - 1) * size,
+                higherBoundIndex: Math.min(page * size - 1, filteredCount - 1),
+                ...newSummary
+            }
         });
     };
     directive.onSummaryChange(listener);
     const WrappingComponent = props => {
-        const { stState = directive.state(), stTable } = props, otherProps = __rest$5(props, ["stState", "stTable"]);
+        const { stState = directive.state(), stTable, ...otherProps } = props;
         const fullProps = Object.assign({}, otherConfProps, otherProps);
         return comp(fullProps, { state: stState, config: { stTable }, directive });
     };
@@ -212,4 +162,6 @@ const withPagination = (comp) => (conf) => {
     return unsubscribe(subscribe(WrappingComponent));
 };
 
-export { withListChange, withSearch, withSort, withFilter, withIndicator, withPagination };
+const withTable = (table) => (comp) => (props, ...rest) => comp(Object.assign({ stTable: table }, props), ...rest);
+
+export { withListChange, withSearch, withSort, withFilter, withIndicator, withPagination, withTable };

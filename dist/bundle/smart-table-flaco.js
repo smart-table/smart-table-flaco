@@ -65,15 +65,16 @@ var SmartTableFlaco = (function (exports) {
         node.textContent = val;
     };
     const createDomNode = (vnode, parent) => {
-        if (vnode.nodeType === 'svg') {
-            return document.createElementNS(SVG_NP, vnode.nodeType);
+        switch (vnode.nodeType) {
+            case 'svg':
+                return document.createElementNS(SVG_NP, vnode.nodeType);
+            case 'Text':
+                return document.createTextNode(vnode.nodeType);
+            default:
+                return parent.namespaceURI === SVG_NP ?
+                    document.createElementNS(SVG_NP, vnode.nodeType) :
+                    document.createElement(vnode.nodeType);
         }
-        else if (vnode.nodeType === 'Text') {
-            return document.createTextNode(vnode.nodeType);
-        }
-        return parent.namespaceURI === SVG_NP ?
-            document.createElementNS(SVG_NP, vnode.nodeType) :
-            document.createElement(vnode.nodeType);
     };
     // @ts-ignore
     const getEventListeners = (props) => Object.keys(props)
@@ -129,17 +130,20 @@ var SmartTableFlaco = (function (exports) {
     const domFactory = createDomNode;
     // Apply vnode diffing to actual dom node (if new node => it will be mounted into the parent)
     const domify = (oldVnode, newVnode, parentDomNode) => {
-        if (oldVnode === null && newVnode) { // There is no previous vnode
+        // There is no previous vnode -> We create a new node
+        if (oldVnode === null && newVnode) {
             newVnode.dom = parentDomNode.appendChild(domFactory(newVnode, parentDomNode));
             newVnode.lifeCycle = 1;
             return { vnode: newVnode, garbage: null };
         }
         // There is a previous vnode
-        if (newVnode === null) { // We must remove the related dom node
+        // Case 1: Remove the related dom node
+        if (newVnode === null) {
             parentDomNode.removeChild(oldVnode.dom);
             return ({ garbage: oldVnode, vnode: null });
+            // Case 2: replace the old
         }
-        else if (newVnode.nodeType !== oldVnode.nodeType) { // It must be replaced (todo check with keys)
+        else if (newVnode.nodeType !== oldVnode.nodeType) {
             newVnode.dom = domFactory(newVnode, parentDomNode);
             newVnode.lifeCycle = 1;
             parentDomNode.replaceChild(newVnode.dom, oldVnode.dom);
@@ -265,19 +269,10 @@ var SmartTableFlaco = (function (exports) {
         return isVTextNode(vnode) ? escapeHTML(String(vnode.props.value)) : `<${nodeType}${attributes ? ` ${attributes}` : ''}>${childrenHtml}</${nodeType}>`;
     });
 
-    var __rest = (undefined && undefined.__rest) || function (s$$1, e) {
-        var t = {};
-        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
-            t[p$$1] = s$$1[p$$1];
-        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
-            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
-                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
-        return t;
-    };
     const withListChange = (comp) => (conf) => {
         let updateFunc;
         // @ts-ignore
-        const { stTable } = conf, otherConf = __rest(conf, ["stTable"]);
+        const { stTable, ...otherConf } = conf;
         const normalizedConf = { stTable };
         const table$$1 = normalizedConf.stTable;
         const listener = (items) => {
@@ -285,7 +280,7 @@ var SmartTableFlaco = (function (exports) {
         };
         table$$1.onDisplayChange(listener);
         const WrappingComponent = props => {
-            const { items, stTable: whatever } = props, otherProps = __rest(props, ["items", "stTable"]);
+            const { items, stTable: whatever, ...otherProps } = props;
             const stState = items || [];
             const fullProps = Object.assign({}, otherConf, otherProps);
             return comp(fullProps, { state: stState, config: normalizedConf });
@@ -485,19 +480,10 @@ var SmartTableFlaco = (function (exports) {
     const executionListener = proxyListener({ ["EXEC_CHANGED" /* EXEC_CHANGED */]: 'onExecutionChange' });
     const workingIndicatorDirective = ({ table }) => executionListener({ emitter: table });
 
-    var __rest$1 = (undefined && undefined.__rest) || function (s$$1, e) {
-        var t = {};
-        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
-            t[p$$1] = s$$1[p$$1];
-        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
-            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
-                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
-        return t;
-    };
     const withSearch = (comp) => (conf) => {
         let updateFunction;
         // @ts-ignore
-        const { stTable, stScope } = conf, otherConfProps = __rest$1(conf, ["stTable", "stScope"]);
+        const { stTable, stScope, ...otherConfProps } = conf;
         const normalizedConf = {
             stTable,
             stScope
@@ -507,7 +493,7 @@ var SmartTableFlaco = (function (exports) {
         const listener = (newState) => updateFunction({ stState: newState });
         directive.onSearchChange(listener);
         const WrappingComponent = props => {
-            const { stState = directive.state(), stTable, stScope } = props, otherProps = __rest$1(props, ["stState", "stTable", "stScope"]);
+            const { stState = directive.state(), stTable, stScope, ...otherProps } = props;
             const fullProps = Object.assign({}, otherConfProps, otherProps);
             return comp(fullProps, { state: stState, config: normalizedConf, directive });
         };
@@ -520,19 +506,10 @@ var SmartTableFlaco = (function (exports) {
         return unsubscribe(subscribe(WrappingComponent));
     };
 
-    var __rest$2 = (undefined && undefined.__rest) || function (s$$1, e) {
-        var t = {};
-        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
-            t[p$$1] = s$$1[p$$1];
-        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
-            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
-                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
-        return t;
-    };
     const withSort = (comp) => (conf) => {
         let updateFunction;
         // @ts-ignore
-        const { stTable, stPointer, stCycle = false } = conf, otherConfProps = __rest$2(conf, ["stTable", "stPointer", "stCycle"]);
+        const { stTable, stPointer, stCycle = false, ...otherConfProps } = conf;
         const normalizedConf = {
             stPointer,
             stCycle,
@@ -543,7 +520,7 @@ var SmartTableFlaco = (function (exports) {
         const listener = (newState) => updateFunction({ stState: newState });
         directive.onSortToggle(listener);
         const WrappingComponent = props => {
-            const { stState = directive.state(), stTable, stCycle, stPointer } = props, otherProps = __rest$2(props, ["stState", "stTable", "stCycle", "stPointer"]);
+            const { stState = directive.state(), stTable, stCycle, stPointer, ...otherProps } = props;
             const fullProps = Object.assign({}, otherConfProps, otherProps);
             return comp(fullProps, { state: stState, config: normalizedConf, directive });
         };
@@ -556,19 +533,10 @@ var SmartTableFlaco = (function (exports) {
         return unsubscribe(subscribe(WrappingComponent));
     };
 
-    var __rest$3 = (undefined && undefined.__rest) || function (s$$1, e) {
-        var t = {};
-        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
-            t[p$$1] = s$$1[p$$1];
-        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
-            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
-                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
-        return t;
-    };
     const withFilter = (comp) => (conf) => {
         let updateFunction;
         // @ts-ignore
-        const { stTable, stType = "string" /* STRING */, stOperator = "includes" /* INCLUDES */, stPointer } = conf, otherConfProps = __rest$3(conf, ["stTable", "stType", "stOperator", "stPointer"]);
+        const { stTable, stType = "string" /* STRING */, stOperator = "includes" /* INCLUDES */, stPointer, ...otherConfProps } = conf;
         const normalizedConf = {
             stTable, stType, stOperator, stPointer
         };
@@ -579,7 +547,7 @@ var SmartTableFlaco = (function (exports) {
         const listener = newState => updateFunction({ stState: newState });
         directive.onFilterChange(listener);
         const WrappingComponent = props => {
-            const { stState = directive.state(), stTable, stType, stOperator, stPointer } = props, otherProps = __rest$3(props, ["stState", "stTable", "stType", "stOperator", "stPointer"]);
+            const { stState = directive.state(), stTable, stType, stOperator, stPointer, ...otherProps } = props;
             const fullProps = Object.assign({}, otherConfProps, otherProps);
             return comp(fullProps, { state: stState, config: normalizedConf, directive });
         };
@@ -592,19 +560,10 @@ var SmartTableFlaco = (function (exports) {
         return unsubscribe(subscribe(WrappingComponent));
     };
 
-    var __rest$4 = (undefined && undefined.__rest) || function (s$$1, e) {
-        var t = {};
-        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
-            t[p$$1] = s$$1[p$$1];
-        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
-            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
-                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
-        return t;
-    };
     const withIndicator = (comp) => (conf) => {
         let updateFunction;
         // @ts-ignore
-        const { stTable } = conf, otherConfProps = __rest$4(conf, ["stTable"]);
+        const { stTable, ...otherConfProps } = conf;
         const normalizedConf = {
             stTable
         };
@@ -613,7 +572,7 @@ var SmartTableFlaco = (function (exports) {
         const listener = (newState) => updateFunction({ stState: newState });
         directive.onExecutionChange(listener);
         const WrappingComponent = props => {
-            const { stState = { working: false }, stTable } = props, otherProps = __rest$4(props, ["stState", "stTable"]);
+            const { stState = { working: false }, stTable, ...otherProps } = props;
             const fullProps = Object.assign({}, otherConfProps, otherProps);
             return comp(fullProps, { state: stState, config: normalizedConf, directive });
         };
@@ -626,29 +585,24 @@ var SmartTableFlaco = (function (exports) {
         return unsubscribe(subscribe(WrappingComponent));
     };
 
-    var __rest$5 = (undefined && undefined.__rest) || function (s$$1, e) {
-        var t = {};
-        for (var p$$1 in s$$1) if (Object.prototype.hasOwnProperty.call(s$$1, p$$1) && e.indexOf(p$$1) < 0)
-            t[p$$1] = s$$1[p$$1];
-        if (s$$1 != null && typeof Object.getOwnPropertySymbols === "function")
-            for (var i$$1 = 0, p$$1 = Object.getOwnPropertySymbols(s$$1); i$$1 < p$$1.length; i$$1++) if (e.indexOf(p$$1[i$$1]) < 0)
-                t[p$$1[i$$1]] = s$$1[p$$1[i$$1]];
-        return t;
-    };
     const withPagination = (comp) => (conf) => {
         let updateFunc;
         // @ts-ignore
-        const { stTable } = conf, otherConfProps = __rest$5(conf, ["stTable"]);
+        const { stTable, ...otherConfProps } = conf;
         const directive = paginationDirective({ table: stTable });
         const listener = (newSummary) => {
             const { page, size, filteredCount } = newSummary;
             updateFunc({
-                stState: Object.assign({ lowerBoundIndex: (page - 1) * size, higherBoundIndex: Math.min(page * size - 1, filteredCount - 1) }, newSummary)
+                stState: {
+                    lowerBoundIndex: (page - 1) * size,
+                    higherBoundIndex: Math.min(page * size - 1, filteredCount - 1),
+                    ...newSummary
+                }
             });
         };
         directive.onSummaryChange(listener);
         const WrappingComponent = props => {
-            const { stState = directive.state(), stTable } = props, otherProps = __rest$5(props, ["stState", "stTable"]);
+            const { stState = directive.state(), stTable, ...otherProps } = props;
             const fullProps = Object.assign({}, otherConfProps, otherProps);
             return comp(fullProps, { state: stState, config: { stTable }, directive });
         };
@@ -661,12 +615,15 @@ var SmartTableFlaco = (function (exports) {
         return unsubscribe(subscribe(WrappingComponent));
     };
 
+    const withTable = (table) => (comp) => (props, ...rest) => comp(Object.assign({ stTable: table }, props), ...rest);
+
     exports.withListChange = withListChange;
     exports.withSearch = withSearch;
     exports.withSort = withSort;
     exports.withFilter = withFilter;
     exports.withIndicator = withIndicator;
     exports.withPagination = withPagination;
+    exports.withTable = withTable;
 
     return exports;
 

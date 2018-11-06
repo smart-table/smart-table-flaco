@@ -2,10 +2,12 @@
   "name": "smart-table-flaco",
   "version": "0.1.0",
   "description": "smart table binding for Flaco framework",
-  "main": "index.js",
+  "main": "./dist/bundle/index",
+  "types": "./dist/declarations/index.d.ts",
+  "module": "./dist/bundle/module.js",
   "scripts": {
     "test:ci": "npm run build && npm test",
-    "test": "rollup -c ./rollup/test.js | tape-run",
+    "test": "tsc -b test && rollup -c ./rollup/test.js | tee ./test/dist/debug.js | tape-run",
     "build:clean": "rm -rf ./dist && mkdir -p ./dist/bundle && cp -r ./src ./dist/src",
     "build:compile": "tsc",
     "build:bundle": "rollup -c ./rollup/build.js && rollup -c ./rollup/cdn.js",
@@ -25,16 +27,17 @@
   "author": "Laurent Renard <laurent34azerty@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "flaco": "2.0.0-3",
     "rollup": "^0.66.6",
+    "rollup-plugin-commonjs": "^9.2.0",
     "rollup-plugin-node-resolve": "^3.4.0",
+    "smart-table-core": "^3.0.2",
     "tape-run": "^4.0.0",
     "typescript": "^3.1.4",
-    "zora": "^2.0.1",
-    "smart-table-core": "^3.0.2",
-    "flaco": "2.0.0-2"
+    "zora": "^2.0.1"
   },
   "peerDependencies": {
     "smart-table-core": "^3.0.2",
-    "flaco": "2.0.0-2"
+    "flaco": "2.0.0-3"
   }
 }

@@ -1,7 +1,9 @@
 import {h, input, mount} from 'flaco';
 import {Job, User, users} from './fixture';
-import {DisplayedItem, FilterOperator, FilterType, smartTable, SmartTable, SortDirection} from 'smart-table-core';
-import {withFilter, withIndicator, withListChange, withPagination, withSearch, withSort} from '../dist/src';
+import {DisplayedItem, FilterOperator, FilterType, smartTable, SortDirection} from 'smart-table-core';
+import {withFilter, withIndicator, withListChange, withPagination, withSearch, withSort, withTable} from '../dist/src';
+
+const compose = (a, b) => (...args) => b(a(...args));
 
 const table = smartTable<User>({
     data: users, tableState: {
@@ -11,6 +13,15 @@ const table = smartTable<User>({
         slice: {page: 1, size: 25}
     }
 });
+
+const withUserTable = withTable<User>(table);
+
+const sortable = compose(withSort, withUserTable);
+const searchable = compose(withSearch, withUserTable);
+const listable = compose(withListChange, withUserTable);
+const filterable = compose(withFilter, withUserTable);
+const paginable = compose(withPagination, withUserTable);
+const indicable = compose(withIndicator, withUserTable);
 
 const debounce = (fn: Function, time = 300) => {
     let timer;
@@ -30,7 +41,7 @@ const UserRow = (UserItem: DisplayedItem<User>) => <tr>
     <td>{UserItem.value.balance}</td>
 </tr>;
 
-const UserList = withListChange<User, { id: string }>((props, stProps) => {
+const UserList = listable((props, stProps) => {
     const {state} = stProps;
     return <tbody id={props.id}>
     {state.length ? state.map(UserRow) : <tr>
@@ -41,7 +52,8 @@ const UserList = withListChange<User, { id: string }>((props, stProps) => {
     </tbody>;
 });
 
-const Header = withSort<User, any>((props, stProps) => {
+const Header = sortable((props, stProps) => {
+
     const {state, directive, config} = stProps;
     const className = state.pointer !== config.stPointer || state.direction === SortDirection.NONE ?
         '' : (state.direction === SortDirection.DESC ?
@@ -52,14 +64,14 @@ const Header = withSort<User, any>((props, stProps) => {
     </th>;
 });
 
-const SearchBar = withSearch<User, any>((props, stProps) => {
+const SearchBar = searchable((props, stProps) => {
     const {state, directive} = stProps;
     const onInput = debounce(ev => directive.search(ev.target.value, {flags: 'i'}));
     return <input placeholder="Search..." type="search" value={state.value || ''} oninput={onInput}/>;
 });
 
-const JobFilter = withFilter<User, any>((props, stProps) => {
-    const {state, directive, config} = stProps;
+const JobFilter = filterable((props, stProps) => {
+    const {directive} = stProps;
     const onChange = (ev) => directive.filter(ev.target.value);
 
     return <select onchange={onChange}>
@@ -70,7 +82,7 @@ const JobFilter = withFilter<User, any>((props, stProps) => {
     </select>;
 });
 
-const LoadingIndicator = withIndicator<User, any>((props, stProps) => {
+const LoadingIndicator = indicable((props, stProps) => {
     const {state: {working}} = stProps;
     let classNames = (props['class'] || '').split(' ');
     if (working === false) {
@@ -84,7 +96,7 @@ const LoadingIndicator = withIndicator<User, any>((props, stProps) => {
     return <div class={classNames.join(' ')}>Loading ...</div>;
 });
 
-const BalanceFilter = withFilter<User, any>((props, stProps) => {
+const BalanceFilter = filterable((props, stProps) => {
     // go directly with table instance
     const {config: {stTable: table}, state} = stProps;
     const clause = state.balance || [];
@@ -116,7 +128,7 @@ const BalanceFilter = withFilter<User, any>((props, stProps) => {
     </div>;
 });
 
-const InputFilter = withFilter<User, any>((props, stProps) => {
+const InputFilter = filterable((props, stProps) => {
     const {children, ...others} = props;
     const onInput = debounce((ev) => {
         stProps.directive.filter(ev.target.value);
@@ -124,7 +136,7 @@ const InputFilter = withFilter<User, any>((props, stProps) => {
     return <input {...others} oninput={onInput}/>;
 });
 
-const Pagination = withPagination<User, any>((props, stProps) => {
+const Pagination = paginable((props, stProps) => {
     const {state, directive} = stProps;
     return <div class="pagination">
         <p class="summary">Showing
@@ -144,50 +156,49 @@ const App = ({table}) => <div>
         <h2>Filter options</h2>
         <label>
             <span>First name:</span>
-            <InputFilter placeholder="Search for first name" stTable={table} stPointer="name.first"/>
+            <InputFilter placeholder="Search for first name" stPointer="name.first"/>
         </label>
         <label>
             <span>Last name:</span>
-            <InputFilter placeholder="Search for last name" stTable={table} stPointer="name.last"/>
+            <InputFilter placeholder="Search for last name" stPointer="name.last"/>
         </label>
         <label>
             <span>Filter by job type:</span>
-            <JobFilter stTable={table} stPointer="job"/>
+            <JobFilter stPointer="job"/>
         </label>
         <label>
             <span>Born after:</span>
-            <InputFilter autocomplete="birthdate" type="date" stTable={table} stPointer="birthDate"
+            <InputFilter autocomplete="birthdate" type="date" stPointer="birthDate"
                          stType={FilterType.DATE}
                          stOperator={FilterOperator.GREATER_THAN}/>
         </label>
-        <BalanceFilter stPointer="balance" stTable={table}/>
+        <BalanceFilter stPointer="balance"/>
     </div>
-    <Pagination stTable={table}/>
+    <Pagination/>
     <div id="table-container">
-        <LoadingIndicator stTable={table} class="loader"/>
+        <LoadingIndicator class="loader"/>
         <table>
             <thead>
             <tr>
-                <Header stTable={table} stPointer="name.first" stCycle={true}>First Name</Header>
-                <Header stTable={table} stPointer="name.last">Last Name</Header>
-                <Header stTable={table} stPointer="job">Job</Header>
-                <Header stTable={table} stPointer="birthDate">Birth Date</Header>
-                <Header stTable={table} stPointer="balance">Balance</Header>
+                <Header stPointer="name.first" stCycle={true}>First Name</Header>
+                <Header stPointer="name.last">Last Name</Header>
+                <Header stPointer="job">Job</Header>
+                <Header stPointer="birthDate">Birth Date</Header>
+                <Header stPointer="balance">Balance</Header>
             </tr>
             <tr>
                 <td colspan="5">
-                    <SearchBar stTable={table} stScope={['name.first', 'name.last']}/>
+                    <SearchBar stScope={['name.first', 'name.last']}/>
                 </td>
             </tr>
             </thead>
-            <UserList id="Hello" stTable={table}/>
+            <UserList id="Hello"/>
         </table>
-        <Pagination stTable={table} />
+        <Pagination/>
     </div>
 </div>;
 
 const container = document.getElementById('app-container');
-
 
 mount(<App table={table}/>, {}, container);
 

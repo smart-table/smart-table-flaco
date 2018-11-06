@@ -4,13 +4,13 @@
       "es2018",
       "dom"
     ],
-    "module": "es2015",
+    "module": "esnext",
     "moduleResolution": "node",
     "noImplicitAny": false,
     "preserveConstEnums": true,
     "declaration": true,
     "declarationDir": "./dist/declarations",
-    "target": "es2018"
+    "target": "esnext"
   },
   "include": [
     "./dist/src/*"
